@@ -1,13 +1,13 @@
 /*
-     _______ _______      __  _____                         
-    |__   __/ ____\ \    / / |  __ \                        
-       | | | (___  \ \  / /  | |__) |_ _ _ __ ___  ___ _ __ 
-       | |  \___ \  \ \/ /   |  ___/ _` | '__/ __|/ _ \ '__|
-       | |  ____) |  \  /    | |  | (_| | |  \__ \  __/ |   
-       |_| |_____/    \/     |_|   \__,_|_|  |___/\___|_|   
-    Version 1.0
+	 _______ _______      __  _____                         
+	|__   __/ ____\ \    / / |  __ \                        
+	   | | | (___  \ \  / /  | |__) |_ _ _ __ ___  ___ _ __ 
+	   | |  \___ \  \ \/ /   |  ___/ _` | '__/ __|/ _ \ '__|
+	   | |  ____) |  \  /    | |  | (_| | |  \__ \  __/ |   
+	   |_| |_____/    \/     |_|   \__,_|_|  |___/\___|_|   
+	Version 1.0
 
-    A simple and easy-to-use C++ TSV Parser, it can read TSV files, modify them, and export them.
+	A simple and easy-to-use TSV Parser, it can read TSV files, modify them, and export them.
 
 	This library is under the MIT License
 
@@ -29,163 +29,417 @@
 	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 	SOFTWARE.
 */
+#include <algorithm>
 #include <fstream>
 #include <sstream>
 #include <vector>
 #include <map>
 
-struct Row
+namespace tsv
 {
-	std::map<int, std::string> Columns;
-
-	Row(std::vector<std::string> columns = {})
+	struct Column
 	{
-		for (std::string& s : columns)
+		bool IsNumber()
 		{
-			*this += s;
+			return IsNumber(value);
 		}
-	}
 
-	void operator+=(std::string column)
-	{
-		Columns[Columns.size()] = column;
-	}
-
-	void operator-=(std::string column)
-	{
-		for(auto& n : Columns)
+		int GetNumber()
 		{
-			if (n.second == column)
+			if (IsNumber()) return std::stoi(value);
+			return 0;
+		}
+
+		double GetPreciseNumber()
+		{
+			if (IsNumber()) return std::stod(value);
+			return 0;
+		}
+
+		std::string GetString()
+		{
+			if (IsNumber())
 			{
-				Columns.erase(n.first);
-				return;
+				std::string copy(value);
+			
+				std::replace(copy.begin(), copy.end(), '.', ',');
+
+				return copy;
+			}
+			return value;
+		}
+
+		void operator+=(int value)
+		{
+			if(IsNumber())
+			{
+				this->value = std::to_string(std::stod(this->value) + value);
+				removeExtraZeros();
 			}
 		}
-	}
 
-	std::string& operator[](int columnNumber)
-	{
-		return Columns[columnNumber];
-	}
-
-	bool operator==(Row other)
-	{
-		return this->Columns == other.Columns;
-	}	
-
-	void operator=(std::vector<std::string> columns)
-	{
-		Columns.clear();
-
-		for (std::string& s : columns)
+		void operator+=(double value)
 		{
-			*this += s;
-		}
-	}
-};
-
-struct TSV
-{
-	std::map<int, Row> Rows;
-
-	void OpenString(std::string string)
-	{
-		std::istringstream inputStream(string);
-
-		std::string line;
-
-		while (std::getline(inputStream, line, '\n'))
-		{
-			Row newLine;
-
-			std::string buffer = "";
-
-			for (auto c : line)
+			if(IsNumber())
 			{
-				if (c == '\t')
+				this->value = std::to_string(std::stod(this->value) + value);
+				removeExtraZeros();
+			}
+		}
+
+		void operator+=(std::string value)
+		{
+			if (IsNumber() && setDotPeriot(value))
+			{
+				this->value = std::to_string(std::stod(this->value) + std::stod(value));
+				removeExtraZeros();
+			}
+			else this->value += value;
+		}
+
+		void operator-=(int value)
+		{
+			if (IsNumber())
+			{
+				this->value = std::to_string(std::stod(this->value) - value);
+				removeExtraZeros();
+			}
+		}
+
+		void operator-=(double value)
+		{
+			if (IsNumber())
+			{
+				this->value = std::to_string(std::stod(this->value) - value);
+				removeExtraZeros();
+			}
+		}
+
+		void operator-=(std::string value)
+		{
+			if (!IsNumber()) return;
+
+			if (setDotPeriot(value))
+			{
+				this->value = std::to_string(std::stod(this->value) - std::stod(value));
+				removeExtraZeros();
+			}
+		}
+
+		void operator=(int value)
+		{
+			this->value = std::to_string(value);
+		}
+
+		void operator=(double value)
+		{
+			this->value = std::to_string(value);
+			removeExtraZeros();
+		}
+
+		void operator=(std::string value)
+		{
+			setDotPeriot(value);
+			
+			this->value = value;
+
+			if(IsNumber()) removeExtraZeros();
+		}
+
+		bool operator==(int otherValue)
+		{
+			if (IsNumber())
+				return std::stod(this->value) == otherValue;
+			return false;
+		}
+
+		bool operator==(double otherValue)
+		{
+			if (IsNumber())
+				return std::stod(this->value) == otherValue;
+			return false;
+		}
+
+		bool operator==(std::string otherValue)
+		{
+			return this->value == otherValue;
+		}
+
+		bool operator==(Column otherColumn) const
+		{
+			return this->value == otherColumn.value;
+		}
+	private:
+		std::string value = "";
+
+		// Check if a given string is a number, works with integer, decimal and exponential numbers.
+		bool IsNumber(std::string string)
+		{
+			std::stringstream stream;
+
+			stream << string;
+			
+			double num = 0;
+			
+			stream >> num;
+			
+			if (stream.good())
+				return false;
+			if (num == 0 && string[0] != 0)
+				return false;
+
+			return true;
+		}
+
+		// Removes extra zeros eg. 2.3200 -> 2.32.
+		void removeExtraZeros()
+		{
+			if (!IsNumber()) return;
+    
+			// Check if string is exponential, if it is then don't remove extra zeros
+			{			
+				std::string copy(value);
+				
+				std::transform(copy.begin(), copy.end(),
+				copy.begin(), ::tolower);
+					
+				if (copy.find('e') != std::string::npos) return;
+			}
+
+			value.erase(value.find_last_not_of('0') + 1, std::string::npos);
+			value.erase(value.find_last_not_of('.') + 1, std::string::npos);
+		}
+
+		// Checks if the given string is a number or not.
+		// Returns true if it is, otherwise false.
+		bool setDotPeriot(std::string& string)
+		{
+			// 'string' is already a number and doesn't need any conversions.
+			if (IsNumber(string)) return true;
+
+			// No conversion for 'string' available.
+			if (string.find(',') == std::string::npos) return false;
+
+			std::string copy(string);
+			
+			std::replace(copy.begin(), copy.end(), ',', '.');
+
+			// Conversion didn't work, 'string' is still a number.
+			if (!IsNumber(copy)) return false;
+
+			// Conversion worked, 'string' is now a C++ decimal number.
+			string = copy;
+
+			return true;
+		}
+	};
+
+	struct Row
+	{
+		std::map<int, Column> Columns;
+
+		Row(std::vector<std::string> columns = {})
+		{
+			for (std::string& s : columns)
+			{
+				*this += s;
+			}
+		}
+
+		void operator+=(int column)
+		{
+			Columns[Columns.size()] = column;
+		}
+
+		void operator+=(double column)
+		{
+			Columns[Columns.size()] = column;
+		}
+
+		void operator+=(std::string column)
+		{
+			Columns[Columns.size()] = column;
+		}
+
+		void operator+=(Column column)
+		{
+			Columns[Columns.size()] = column;
+		}
+
+		void operator-=(int column)
+		{
+			for(auto& n : Columns)
+			{
+				if (n.second == column)
 				{
-					newLine += buffer;
-					buffer.clear();
+					Columns.erase(n.first);
+					return;
 				}
-				else
-					buffer += c;
 			}
-
-			newLine += buffer;
-
-			Rows[Rows.size()] = newLine;
 		}
-	}
 
-	void OpenFile(std::string path)
-	{
-		std::ifstream file(path);
-
-		if (!file.is_open()) return;
-
-		std::stringstream stream;
-
-		file >> stream.rdbuf();
-
-		OpenString(stream.str());
-		
-		file.close();
-	}
-
-	std::string ToString()
-	{
-		std::stringstream stream;
-
-		for (int i = 0; i < Rows.size(); i++)
+		void operator-=(double column)
 		{
-			int columnsSize = 1;
-
-			for(auto& n : Rows[i].Columns)
+			for(auto& n : Columns)
 			{
-				if (n.first > 0)
-					columnsSize = n.first + 1;
-			}
-
-			for (int i2 = 0; i2 < columnsSize; i2++)
-			{
-				stream << Rows[i].Columns[i2];
-
-				if (i2 == columnsSize - 1 && i != Rows.size() - 1) stream << '\n';
-				else if (i2 != columnsSize - 1) stream << '\t';
+				if (n.second == column)
+				{
+					Columns.erase(n.first);
+					return;
+				}
 			}
 		}
 
-		return stream.str();
-	}
-
-	void ToFile(std::string path)
-	{
-		std::ofstream file(path);
-		
-		file << ToString();
-		
-		file.close();
-	}
-
-	void operator+=(Row row)
-	{
-		Rows[Rows.size()] = row;
-	}
-
-	void operator-=(Row row)
-	{
-		for(auto& r : Rows)
+		void operator-=(std::string column)
 		{
-			if (r.second == row)
+			for(auto& n : Columns)
 			{
-				Rows.erase(r.first);
-				return;
+				if (n.second == column)
+				{
+					Columns.erase(n.first);
+					return;
+				}
 			}
 		}
-	}
 
-	Row& operator[](int rowNumber)
+		void operator-=(Column column)
+		{
+			for(auto& n : Columns)
+			{
+				if (n.second == column)
+				{
+					Columns.erase(n.first);
+					return;
+				}
+			}
+		}
+
+		// TODO: Add option to search for int, double and string.
+
+		Column& operator[](int columnNumber)
+		{
+			return Columns[columnNumber];
+		}
+
+		bool operator==(const Row other) const
+		{
+			return this->Columns == other.Columns;
+		}
+
+		void operator=(std::vector<std::string> columns)
+		{
+			Columns.clear();
+
+			for (std::string& s : columns)
+			{
+				*this += s;
+			}
+		}
+	};
+
+	struct File
 	{
-		return Rows[rowNumber];
-	}
-};
+		std::map<int, Row> Rows;
+
+		void OpenString(std::string string)
+		{
+			std::istringstream inputStream(string);
+
+			std::string line;
+
+			while (std::getline(inputStream, line, '\n'))
+			{
+				Row newLine;
+
+				std::string buffer = "";
+
+				for (auto c : line)
+				{
+					if (c == '\t')
+					{
+						newLine += buffer;
+						buffer.clear();
+					}
+					else
+						buffer += c;
+				}
+
+				newLine += buffer;
+
+				Rows[Rows.size()] = newLine;
+			}
+		}
+
+		void OpenFile(std::string path)
+		{
+			std::ifstream file(path);
+
+			if (!file.is_open()) return;
+
+			std::stringstream stream;
+
+			file >> stream.rdbuf();
+
+			OpenString(stream.str());
+			
+			file.close();
+		}
+
+		std::string ToString()
+		{
+			std::stringstream stream;
+
+			for (int i = 0; i < Rows.size(); i++)
+			{
+				int columnsSize = 1;
+
+				for(auto& n : Rows[i].Columns)
+				{
+					if (n.first > 0)
+						columnsSize = n.first + 1;
+				}
+
+				for (int i2 = 0; i2 < columnsSize; i2++)
+				{
+					stream << Rows[i].Columns[i2].GetString();
+
+					if (i2 == columnsSize - 1 && i != Rows.size() - 1) stream << '\n';
+					else if (i2 != columnsSize - 1) stream << '\t';
+				}
+			}
+
+			return stream.str();
+		}
+
+		void ToFile(std::string path)
+		{
+			std::ofstream file(path);
+			
+			file << ToString();
+			
+			file.close();
+		}
+
+		void operator+=(Row row)
+		{
+			Rows[Rows.size()] = row;
+		}
+
+		void operator-=(Row row)
+		{
+			for(std::pair<const int, Row>& r : Rows)
+			{
+				if (r.second == row)
+				{
+					Rows.erase(r.first);
+					return;
+				}
+			}
+		}
+
+		Row& operator[](int rowNumber)
+		{
+			return Rows[rowNumber];
+		}
+	};
+}
