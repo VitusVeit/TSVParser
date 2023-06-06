@@ -35,411 +35,622 @@
 #include <vector>
 #include <map>
 
+/**
+ * The main namespace of the TSVParser library.
+ * It contains the File class, the Column class, the Row class, and other classes and functions relative to TSV files.
+ */
 namespace tsv
 {
+	/**
+	 * The Column is the base class for a value inside a TSV table.
+	 * It supports ints, doubles, and strings. 
+	 */
 	struct Column
 	{
-		bool IsNumber()
-		{
-			return IsNumber(value);
-		}
+		Column(int value);
 
-		int GetNumber()
-		{
-			if (IsNumber()) return std::stoi(value);
-			return 0;
-		}
+		Column(double value);
 
-		double GetPreciseNumber()
-		{
-			if (IsNumber()) return std::stod(value);
-			return 0;
-		}
+		Column(std::string value = "");
 
-		std::string GetString()
-		{
-			if (IsNumber())
-			{
-				std::string copy(value);
-			
-				std::replace(copy.begin(), copy.end(), '.', ',');
+		/**
+		 * Checks if the string can be a number of integer, decimal, and exponential type.
+		 *
+		 * NOTE: This function will return true if the value of the column is a string that CAN be converted to a number.
+		 *
+		 * @return whether the value of the Column is a number or not. 
+		 */
+		bool IsNumber();
 
-				return copy;
-			}
-			return value;
-		}
+		/**
+		 * Gets the number stored in the Column.
+		 *
+		 * @return an integer.
+		 */
+		int GetNumber();
 
-		void operator+=(int value)
-		{
-			if(IsNumber())
-			{
-				this->value = std::to_string(std::stod(this->value) + value);
-				removeExtraZeros();
-			}
-		}
+		/**
+		 * Gets the number stored in the Column with decimal precision.
+		 * 
+		 * @return a double.
+		 */
+		double GetPreciseNumber();
 
-		void operator+=(double value)
-		{
-			if(IsNumber())
-			{
-				this->value = std::to_string(std::stod(this->value) + value);
-				removeExtraZeros();
-			}
-		}
+		/**
+		 * Gets the string stored in the Column.
+		 * 
+		 * @return a std::string.
+		 */
+		std::string GetString();
 
-		void operator+=(std::string value)
-		{
-			if (IsNumber() && setDotPeriot(value))
-			{
-				this->value = std::to_string(std::stod(this->value) + std::stod(value));
-				removeExtraZeros();
-			}
-			else this->value += value;
-		}
+		// OPERATORS
 
-		void operator-=(int value)
-		{
-			if (IsNumber())
-			{
-				this->value = std::to_string(std::stod(this->value) - value);
-				removeExtraZeros();
-			}
-		}
+		void operator+=(int value);
 
-		void operator-=(double value)
-		{
-			if (IsNumber())
-			{
-				this->value = std::to_string(std::stod(this->value) - value);
-				removeExtraZeros();
-			}
-		}
+		void operator+=(double value);
 
-		void operator-=(std::string value)
-		{
-			if (!IsNumber()) return;
+		void operator+=(std::string value);
 
-			if (setDotPeriot(value))
-			{
-				this->value = std::to_string(std::stod(this->value) - std::stod(value));
-				removeExtraZeros();
-			}
-		}
+		void operator-=(int value);
 
-		void operator=(int value)
-		{
-			this->value = std::to_string(value);
-		}
+		void operator-=(double value);
 
-		void operator=(double value)
-		{
-			this->value = std::to_string(value);
-			removeExtraZeros();
-		}
+		void operator-=(std::string value);
 
-		void operator=(std::string value)
-		{
-			setDotPeriot(value);
-			
-			this->value = value;
+		void operator=(int value);
 
-			if(IsNumber()) removeExtraZeros();
-		}
+		void operator=(double value);
 
-		bool operator==(int otherValue)
-		{
-			if (IsNumber())
-				return std::stod(this->value) == otherValue;
-			return false;
-		}
+		void operator=(std::string value);
 
-		bool operator==(double otherValue)
-		{
-			if (IsNumber())
-				return std::stod(this->value) == otherValue;
-			return false;
-		}
+		bool operator==(int otherValue);
 
-		bool operator==(std::string otherValue)
-		{
-			return this->value == otherValue;
-		}
+		bool operator==(double otherValue);
 
-		bool operator==(Column otherColumn) const
-		{
-			return this->value == otherColumn.value;
-		}
+		bool operator==(std::string otherValue);
+
+		bool operator==(Column otherColumn) const;
 	private:
 		std::string value = "";
 
-		// Check if a given string is a number, works with integer, decimal and exponential numbers.
-		bool IsNumber(std::string string)
-		{
-			std::stringstream stream;
+		/**
+		 * Checks whether a given string is a number.
+		 *
+		 * Works with integer, decimal and exponential numbers.
+		 *
+		 * @param string The std::string to check.
+		 * @return whether the string is a number or not.
+		 */
+		bool IsNumber(std::string string);
 
-			stream << string;
-			
-			double num = 0;
-			
-			stream >> num;
-			
-			if (stream.good())
-				return false;
-			if (num == 0 && string[0] != 0)
-				return false;
+		/**
+		 * Removes extra zeros after the decimal point from the Column's value.
+		 */
+		void removeExtraZeros();
 
-			return true;
-		}
-
-		// Removes extra zeros eg. 2.3200 -> 2.32.
-		void removeExtraZeros()
-		{
-			if (!IsNumber()) return;
-    
-			// Check if string is exponential, if it is then don't remove extra zeros
-			{			
-				std::string copy(value);
-				
-				std::transform(copy.begin(), copy.end(),
-				copy.begin(), ::tolower);
-					
-				if (copy.find('e') != std::string::npos) return;
-			}
-
-			value.erase(value.find_last_not_of('0') + 1, std::string::npos);
-			value.erase(value.find_last_not_of('.') + 1, std::string::npos);
-		}
-
-		// Checks if the given string is a number or not.
-		// Returns true if it is, otherwise false.
-		bool setDotPeriot(std::string& string)
-		{
-			// 'string' is already a number and doesn't need any conversions.
-			if (IsNumber(string)) return true;
-
-			// No conversion for 'string' available.
-			if (string.find(',') == std::string::npos) return false;
-
-			std::string copy(string);
-			
-			std::replace(copy.begin(), copy.end(), ',', '.');
-
-			// Conversion didn't work, 'string' is still a number.
-			if (!IsNumber(copy)) return false;
-
-			// Conversion worked, 'string' is now a C++ decimal number.
-			string = copy;
-
-			return true;
-		}
+		/**
+		 * Checks if the given string is a number or not.
+		 *
+		 * NOTE: If it's not, it tries to convert it to number.
+		 * 
+		 * @param string The std::string to check.
+		 * @return whether the string is a number or not, or if the conversion worked.
+		 */
+		bool setDotPeriot(std::string& string);
 	};
 
+	/**
+	 * The Row class, can be created manually and added to the File class.
+	 * Or it can be obtained from the File.
+	 * 
+	 * It contains a std::map with all the Column classes.
+	 */
 	struct Row
 	{
 		std::map<int, Column> Columns;
 
-		Row(std::vector<std::string> columns = {})
-		{
-			for (std::string& s : columns)
-			{
-				*this += s;
-			}
-		}
+		Row(std::vector<Column> columns = {});
 
-		void operator+=(int column)
-		{
-			Columns[Columns.size()] = column;
-		}
+		// OPERATORS
 
-		void operator+=(double column)
-		{
-			Columns[Columns.size()] = column;
-		}
+		Column& operator[](int columnNumber);
 
-		void operator+=(std::string column)
-		{
-			Columns[Columns.size()] = column;
-		}
+		void operator+=(int column);
 
-		void operator+=(Column column)
-		{
-			Columns[Columns.size()] = column;
-		}
+		void operator+=(double column);
 
-		void operator-=(int column)
-		{
-			for(auto& n : Columns)
-			{
-				if (n.second == column)
-				{
-					Columns.erase(n.first);
-					return;
-				}
-			}
-		}
+		void operator+=(std::string column);
 
-		void operator-=(double column)
-		{
-			for(auto& n : Columns)
-			{
-				if (n.second == column)
-				{
-					Columns.erase(n.first);
-					return;
-				}
-			}
-		}
+		void operator+=(Column column);
 
-		void operator-=(std::string column)
-		{
-			for(auto& n : Columns)
-			{
-				if (n.second == column)
-				{
-					Columns.erase(n.first);
-					return;
-				}
-			}
-		}
+		void operator-=(int column);
 
-		void operator-=(Column column)
-		{
-			for(auto& n : Columns)
-			{
-				if (n.second == column)
-				{
-					Columns.erase(n.first);
-					return;
-				}
-			}
-		}
+		void operator-=(double column);
 
-		// TODO: Add option to search for int, double and string.
+		void operator-=(std::string column);
 
-		Column& operator[](int columnNumber)
-		{
-			return Columns[columnNumber];
-		}
+		void operator-=(Column column);
 
-		bool operator==(const Row other) const
-		{
-			return this->Columns == other.Columns;
-		}
+		bool operator==(const Row other) const;
 
-		void operator=(std::vector<std::string> columns)
-		{
-			Columns.clear();
-
-			for (std::string& s : columns)
-			{
-				*this += s;
-			}
-		}
+		void operator=(std::vector<Column> columns);
 	};
 
+	/**
+	 * The main class from the TSVParser.
+	 * It can load files, access them by the [] operator and export them. 
+	 */
 	struct File
 	{
 		std::map<int, Row> Rows;
 
-		void OpenString(std::string string)
-		{
-			std::istringstream inputStream(string);
+		/**
+		 * Loads a string of type TSV into the File class.
+		 *
+		 * @param string The std::string to load from.
+		 */
+		void OpenString(std::string string);
 
-			std::string line;
+		/**
+		 * Loads a string from a file of type TSV into the File class.
+		 *
+		 * @param path The path to open the file from.
+		 */
+		void OpenFile(std::string path);
 
-			while (std::getline(inputStream, line, '\n'))
-			{
-				Row newLine;
 
-				std::string buffer = "";
+		/**
+		 * Turns the File class with all its rows and columns into a string that can be opened by TSV editors.
+		 *
+		 * @return the string with all the rows and columns.
+		 */
+		std::string ToString();
 
-				for (auto c : line)
-				{
-					if (c == '\t')
-					{
-						newLine += buffer;
-						buffer.clear();
-					}
-					else
-						buffer += c;
-				}
+		/**
+		 * Turns the File class with all its rows and columns into a TSV file that can be opened by TSV editors.
+		 *
+		 * @param path The path and the name of the file that will be created.
+		 */
+		void ToFile(std::string path);
 
-				newLine += buffer;
+		// OPERATORS
 
-				Rows[Rows.size()] = newLine;
-			}
-		}
+		Row& operator[](int rowNumber);
 
-		void OpenFile(std::string path)
-		{
-			std::ifstream file(path);
+		/**
+		 * Gets a Row class that starts with a Column class that has the given value.
+		 * 
+		 * @param value The value to search for.
+		 * @return a row reference or the first row in the file if there's no match.
+		*/
+		Row& operator[](std::string value);
 
-			if (!file.is_open()) return;
+		void operator+=(Row row);
 
-			std::stringstream stream;
+		void operator+=(std::vector<Column> columns);
 
-			file >> stream.rdbuf();
-
-			OpenString(stream.str());
-			
-			file.close();
-		}
-
-		std::string ToString()
-		{
-			std::stringstream stream;
-
-			for (int i = 0; i < Rows.size(); i++)
-			{
-				int columnsSize = 1;
-
-				for(auto& n : Rows[i].Columns)
-				{
-					if (n.first > 0)
-						columnsSize = n.first + 1;
-				}
-
-				for (int i2 = 0; i2 < columnsSize; i2++)
-				{
-					stream << Rows[i].Columns[i2].GetString();
-
-					if (i2 == columnsSize - 1 && i != Rows.size() - 1) stream << '\n';
-					else if (i2 != columnsSize - 1) stream << '\t';
-				}
-			}
-
-			return stream.str();
-		}
-
-		void ToFile(std::string path)
-		{
-			std::ofstream file(path);
-			
-			file << ToString();
-			
-			file.close();
-		}
-
-		void operator+=(Row row)
-		{
-			Rows[Rows.size()] = row;
-		}
-
-		void operator-=(Row row)
-		{
-			for(std::pair<const int, Row>& r : Rows)
-			{
-				if (r.second == row)
-				{
-					Rows.erase(r.first);
-					return;
-				}
-			}
-		}
-
-		Row& operator[](int rowNumber)
-		{
-			return Rows[rowNumber];
-		}
+		void operator-=(Row row);
 	};
+}
+
+namespace tsv
+{
+	Column::Column(int value)
+	{
+		this->value = std::to_string(value);
+	}
+
+	Column::Column(double value)
+	{
+		this->value = std::to_string(value);
+		removeExtraZeros();
+	}
+
+	Column::Column(std::string value)
+	{
+		setDotPeriot(value);
+		
+		this->value = value;
+
+		if(IsNumber()) removeExtraZeros();
+	}
+
+	bool Column::IsNumber()
+	{
+		return IsNumber(value);
+	}
+
+	int Column::GetNumber()
+	{
+		if (IsNumber()) return std::stoi(value);
+		return 0;
+	}
+
+	double Column::GetPreciseNumber()
+	{
+		if (IsNumber()) return std::stod(value);
+		return 0;
+	}
+
+	std::string Column::GetString()
+	{
+		if (IsNumber())
+		{
+			std::string copy(value);
+		
+			std::replace(copy.begin(), copy.end(), '.', ',');
+
+			return copy;
+		}
+		return value;
+	}
+
+	void Column::operator+=(int value)
+	{
+		if(IsNumber())
+		{
+			this->value = std::to_string(std::stod(this->value) + value);
+			removeExtraZeros();
+		}
+	}
+
+	void Column::operator+=(double value)
+	{
+		if(IsNumber())
+		{
+			this->value = std::to_string(std::stod(this->value) + value);
+			removeExtraZeros();
+		}
+	}
+
+	void Column::operator+=(std::string value)
+	{
+		if (IsNumber() && setDotPeriot(value))
+		{
+			this->value = std::to_string(std::stod(this->value) + std::stod(value));
+			removeExtraZeros();
+		}
+		else this->value += value;
+	}
+
+	void Column::operator-=(int value)
+	{
+		if (IsNumber())
+		{
+			this->value = std::to_string(std::stod(this->value) - value);
+			removeExtraZeros();
+		}
+	}
+
+	void Column::operator-=(double value)
+	{
+		if (IsNumber())
+		{
+			this->value = std::to_string(std::stod(this->value) - value);
+			removeExtraZeros();
+		}
+	}
+
+	void Column::operator-=(std::string value)
+	{
+		if (!IsNumber()) return;
+
+		if (setDotPeriot(value))
+		{
+			this->value = std::to_string(std::stod(this->value) - std::stod(value));
+			removeExtraZeros();
+		}
+	}
+
+	void Column::operator=(int value)
+	{
+		this->value = std::to_string(value);
+	}
+
+	void Column::operator=(double value)
+	{
+		this->value = std::to_string(value);
+		removeExtraZeros();
+	}
+
+	void Column::operator=(std::string value)
+	{
+		setDotPeriot(value);
+		
+		this->value = value;
+
+		if(IsNumber()) removeExtraZeros();
+	}
+
+	bool Column::operator==(int otherValue)
+	{
+		if (IsNumber())
+			return std::stod(this->value) == otherValue;
+		return false;
+	}
+
+	bool Column::operator==(double otherValue)
+	{
+		if (IsNumber())
+			return std::stod(this->value) == otherValue;
+		return false;
+	}
+
+	bool Column::operator==(std::string otherValue)
+	{
+		return this->value == otherValue;
+	}
+
+	bool Column::operator==(Column otherColumn) const
+	{
+		return this->value == otherColumn.value;
+	}
+
+	bool Column::IsNumber(std::string string)
+	{
+		std::stringstream stream;
+
+		stream << string;
+		
+		double num = 0;
+		
+		stream >> num;
+		
+		if (stream.good())
+			return false;
+		if (num == 0 && string[0] != 0)
+			return false;
+
+		return true;
+	}
+
+	void Column::removeExtraZeros()
+	{
+		if (!IsNumber()) return;
+
+		// Check if string is exponential, if it is then don't remove extra zeros
+		{			
+			std::string copy(value);
+			
+			std::transform(copy.begin(), copy.end(),
+			copy.begin(), ::tolower);
+				
+			if (copy.find('e') != std::string::npos) return;
+		}
+
+		value.erase(value.find_last_not_of('0') + 1, std::string::npos);
+		value.erase(value.find_last_not_of('.') + 1, std::string::npos);
+	}
+
+	bool Column::setDotPeriot(std::string& string)
+	{
+		// 'string' is already a number and doesn't need any conversions.
+		if (IsNumber(string)) return true;
+
+		// No conversion for 'string' available.
+		if (string.find(',') == std::string::npos) return false;
+
+		std::string copy(string);
+		
+		std::replace(copy.begin(), copy.end(), ',', '.');
+
+		// Conversion didn't work, 'string' is still a number.
+		if (!IsNumber(copy)) return false;
+
+		// Conversion worked, 'string' is now a C++ decimal number.
+		string = copy;
+
+		return true;
+	}
+
+	Row::Row(std::vector<Column> columns)
+	{
+		for (Column& s : columns)
+			*this += s;
+	}
+
+	Column& Row::operator[](int columnNumber)
+	{
+		return Columns[columnNumber];
+	}
+
+	void Row::operator+=(int column)
+	{
+		Columns[Columns.size()] = column;
+	}
+
+	void Row::operator+=(double column)
+	{
+		Columns[Columns.size()] = column;
+	}
+
+	void Row::operator+=(std::string column)
+	{
+		Columns[Columns.size()] = column;
+	}
+
+	void Row::operator+=(Column column)
+	{
+		Columns[Columns.size()] = column;
+	}
+
+	void Row::operator-=(int column)
+	{
+		for(auto& n : Columns)
+		{
+			if (n.second == column)
+			{
+				Columns.erase(n.first);
+				return;
+			}
+		}
+	}
+
+	void Row::operator-=(double column)
+	{
+		for(auto& n : Columns)
+		{
+			if (n.second == column)
+			{
+				Columns.erase(n.first);
+				return;
+			}
+		}
+	}
+
+	void Row::operator-=(std::string column)
+	{
+		for(auto& n : Columns)
+		{
+			if (n.second == column)
+			{
+				Columns.erase(n.first);
+				return;
+			}
+		}
+	}
+
+	void Row::operator-=(Column column)
+	{
+		for(auto& n : Columns)
+		{
+			if (n.second == column)
+			{
+				Columns.erase(n.first);
+				return;
+			}
+		}
+	}
+
+	bool Row::operator==(const Row other) const
+	{
+		return this->Columns == other.Columns;
+	}
+
+	void Row::operator=(std::vector<Column> columns)
+	{
+		Columns.clear();
+
+		for (Column& s : columns)
+			*this += s;
+	}
+
+	void File::OpenString(std::string string)
+	{
+		std::istringstream inputStream(string);
+
+		std::string line;
+
+		while (std::getline(inputStream, line, '\n'))
+		{
+			Row newLine;
+
+			std::string buffer = "";
+
+			for (auto c : line)
+			{
+				if (c == '\t')
+				{
+					newLine += buffer;
+					buffer.clear();
+				}
+				else
+					buffer += c;
+			}
+
+			newLine += buffer;
+
+			Rows[Rows.size()] = newLine;
+		}
+	}
+
+	void File::OpenFile(std::string path)
+	{
+		std::ifstream file(path);
+
+		if (!file.is_open()) return;
+
+		std::stringstream stream;
+
+		file >> stream.rdbuf();
+
+		OpenString(stream.str());
+		
+		file.close();
+	}
+
+	std::string File::ToString()
+	{
+		std::stringstream stream;
+
+		for (int i = 0; i < Rows.size(); i++)
+		{
+			int columnsSize = 1;
+
+			for(auto& n : Rows[i].Columns)
+			{
+				if (n.first > 0)
+					columnsSize = n.first + 1;
+			}
+
+			for (int i2 = 0; i2 < columnsSize; i2++)
+			{
+				stream << Rows[i].Columns[i2].GetString();
+
+				if (i2 == columnsSize - 1 && i != Rows.size() - 1) stream << '\n';
+				else if (i2 != columnsSize - 1) stream << '\t';
+			}
+		}
+
+		return stream.str();
+	}
+
+	void File::ToFile(std::string path)
+	{
+		std::ofstream file(path);
+		
+		file << ToString();
+		
+		file.close();
+	}
+
+	Row& File::operator[](int rowNumber)
+	{
+		return Rows[rowNumber];
+	}
+
+	Row& File::operator[](std::string value)
+	{
+		for (auto& row : Rows)
+			if(row.second[0] == value) return row.second;
+		
+		return Rows[0];
+	}
+
+	void File::operator+=(Row row)
+	{
+		Rows[Rows.size()] = row;
+	}
+
+	void File::operator+=(std::vector<Column> columns)
+	{
+		Row newRow;
+
+		for (Column& column : columns)
+			newRow += column;
+		
+		*this += newRow;
+	}
+
+	void File::operator-=(Row row)
+	{
+		for(std::pair<const int, Row>& r : Rows)
+		{
+			if (r.second == row)
+			{
+				Rows.erase(r.first);
+				return;
+			}
+		}
+	}
 }
