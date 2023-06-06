@@ -6,9 +6,9 @@ int main()
     tsv::File myFile;
 
     // You can create a row by a vector of strings.
-    myFile[0] = {"Name", "Age", "Job", "NA"};
+    myFile[0] = {{"Name"}, {"Age"}, {"Job"}, {"NA"}};
 
-    myFile += tsv::Row({"Frank Freeman", "45", "Nuclear Scientist"});
+    myFile += {{"Frank Freeman"}, {"45"}, {"Nuclear Scientist"}};
 
     // Or add them manually.
     tsv::Row r1;
