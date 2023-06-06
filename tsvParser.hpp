@@ -5,11 +5,13 @@
 	   | |  \___ \  \ \/ /   |  ___/ _` | '__/ __|/ _ \ '__|
 	   | |  ____) |  \  /    | |  | (_| | |  \__ \  __/ |   
 	   |_| |_____/    \/     |_|   \__,_|_|  |___/\___|_|   
-	Version 1.0
+	Version 1.2
 
 	A simple and easy-to-use TSV Parser, it can read TSV files, modify them, and export them.
 
 	This library is under the MIT License
+	
+	Copyright (c) 2023 vitopigno
 
 	Permission is hereby granted, free of charge, to any person obtaining a copy
 	of this software and associated documentation files (the "Software"), to deal
