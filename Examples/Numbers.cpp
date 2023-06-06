@@ -5,7 +5,7 @@ int main()
 {
     tsv::File myFile;
 
-    myFile[0] = {"Integer", "Decimal", "Exponential"};
+    myFile[0] = {{"Integer"}, {"Decimal"}, {"Exponential"}};
 
     // Create a row.
     tsv::Row r1;

@@ -1,4 +1,4 @@
-# TSVParser v 1.1.0 🖋️
+# TSVParser v 1.2.0 🖋️
 A simple and easy-to-use C++ TSV Parser, it can read TSV files, modify them, and export them.
 
 For now, it only supports strings (that for a TSV Parser is probably enough) but I'll be working on adding more types if I have time.  
@@ -10,9 +10,9 @@ With TSVParser, you can access TSV files like they're two-dimensional arrays and
 tsv::File myFile;
 
 // You can create a row by a vector of strings.
-myFile[0] = {"Name", "Age", "Job", "NA"};
+myFile[0] = {{"Name"}, {"Age"}, {"Job"}, {"NA"}};
 
-myFile += tsv::Row({"Frank Freeman", "45", "Nuclear Scientist"});
+myFile += {{"Frank Freeman"}, {"45"}, {"Nuclear Scientist"}};
 
 // Or add them manually.
 tsv::Row r1;
@@ -63,7 +63,7 @@ Since version `1.1.0`, TSV files have now support for numbers:
 ```cpp
 tsv::File myFile;
 
-myFile[0] = {"Integer", "Decimal", "Exponential"};
+myFile[0] = {{"Integer"}, {"Decimal"}, {"Exponential"}};
 
 // Create a row.
 tsv::Row r1;
@@ -89,7 +89,22 @@ Result: 🔢
 |:--- |:--- |:--- |
 | 4 | 4,44 | 2,3e+2 |
 
-**NOTE**: In most spreadsheet editors, decimal numbers contain `,` and those who contain `.` are considerated text. So when converting to string/file, TSVWrapper will change all `.` contained in numbers to `,` for compatibility.
+**NOTE**: In most spreadsheet editors, decimal numbers that use `.` instead of `,` to separate integers from decimals are considerated text. So when converting to a string/file, TSVParser will change all `.` contained in numbers to `,` for compatibility.
+
+Since version `1.2.0`, TSV files have now support for search *by value*, like you would do with a book: you first search for the title, and then for the arguments:
+```cpp
+tsv::File f;
+
+f += {{"Name"}, {"Frank"}, {"Mario"}, {"Gordon"}};
+
+f += {{"Age"}, {22}, {44}, {55}};
+
+f += {{"Height"}, {5.6}, {4.89f}, {"32,22"}};
+
+std::cout << f["Height"][3].GetPreciseNumber() << '\n';
+```
+Result: 🔖  
+`32.22`
 
 # License ⚖️
 This library is under the MIT License, which means you can use this Parser for anything but I won't be liable for damages that this Parser could cause.
